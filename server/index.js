@@ -1,20 +1,37 @@
-import express from 'express'
-import http from 'http'
-import {Server as SocketServer} from 'socket.io'
+import express from "express";
+import http from "http";
+import morgan from "morgan";
+import { Server as SocketServer } from "socket.io";
+import { resolve, dirname } from "path";
 
-const app = express()
-const server = http.createServer(app)
+import { PORT } from "./config.js";
+import cors from "cors";
+
+// Initializations
+const app = express();
+const server = http.createServer(app);
 const io = new SocketServer(server, {
-    cors: {
-        origin: "http://localhost:5173"
-    }
-})
+  // cors: {
+  //   origin: "http://localhost:3000",
+  // },
+});
 
-io.on('connection', socket => {
-    console.log('client connnected !!!')
-})
+// Middlewares
+app.use(cors());
+app.use(morgan("dev"));
+app.use(express.urlencoded({ extended: false }));
 
-server.listen(3000)
-console.log('corriendo en puerto', 3000)
+app.use(express.static(resolve("frontend/dist")));
 
+io.on("connection", (socket) => {
+  console.log(socket.id);
+  socket.on("message", (body) => {
+    socket.broadcast.emit("message", {
+      body,
+      from: socket.id.slice(8),
+    });
+  });
+});
 
+server.listen(PORT);
+console.log(`server on port ${PORT}`);
